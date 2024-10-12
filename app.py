@@ -19,20 +19,24 @@ def conjugate(verbe):
     mode_sections = soup.find_all("div", class_="col-xs-12 col-sm-12 col-md-12 col-lg-12 verbetitle")
     
     for mode_section in mode_sections:
-        mode = mode_section.find('h3').text.strip()  # Récupérer le nom du mode (ex: "Indicatif")
-        conjugations[mode] = {}  # Créer une entrée pour ce mode dans le dictionnaire
-        
-        # Trouver la section suivante contenant les temps de ce mode
-        verb_boxes = mode_section.find_next_sibling().find_all("div", class_="col-xs-6 col-sm-6 col-md-3 col-lg-3 verbebox")
-        
-        for box in verb_boxes:
-            tense = box.find('a').text.strip()  # Récupérer le nom du temps (ex: "Présent")
-            # Récupérer toutes les conjugaisons pour ce temps
-            conjugation_list = box.find_all("span", class_="conjugaison")
+        h3 = mode_section.find('h3')
+        if h3 is not None:  # Vérification que l'élément existe
+            mode = h3.text.strip()  # Récupérer le nom du mode (ex: "Indicatif")
+            conjugations[mode] = {}  # Créer une entrée pour ce mode dans le dictionnaire
             
-            # Stocker les conjugaisons sous le temps approprié pour ce mode
-            conjugations[mode][tense] = [conj.text.strip() for conj in conjugation_list]
-    
+            # Trouver la section suivante contenant les temps de ce mode
+            verb_boxes = mode_section.find_next_sibling().find_all("div", class_="col-xs-6 col-sm-6 col-md-3 col-lg-3 verbebox")
+            
+            for box in verb_boxes:
+                tense = box.find('a').text.strip()  # Récupérer le nom du temps (ex: "Présent")
+                # Récupérer toutes les conjugaisons pour ce temps
+                conjugation_list = box.find_all("span", class_="conjugaison")
+                
+                # Stocker les conjugaisons sous le temps approprié pour ce mode
+                conjugations[mode][tense] = [conj.text.strip() for conj in conjugation_list]
+        else:
+            print(f"Mode non trouvé dans la section : {mode_section}")
+
     return jsonify(conjugations)
 
 if __name__ == '__main__':
