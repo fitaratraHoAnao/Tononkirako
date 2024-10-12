@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
-@app.route('/lyrics', methods=['GET'])
+@app.route('/scrape_lyrics', methods=['GET'])
 def scrape_lyrics():
     # Get the artist and song title from the request parameters
     artist = request.args.get('artist', '')
