@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 import requests
 from bs4 import BeautifulSoup
+import re
 
 app = Flask(__name__)
 
@@ -19,17 +20,24 @@ def scrape_lyrics():
     # Parse the HTML content
     soup = BeautifulSoup(response.content, 'html.parser')
     
-    # Find the lyrics content
-    lyrics_div = soup.find('div', {'class': 'col-md-8'})
+    # Find the main content div
+    main_div = soup.find('div', {'id': 'main'})
     
-    if lyrics_div:
+    if main_div:
         # Extract the title
-        title = lyrics_div.find('h2').text.strip()
+        title = main_div.find('h2').text.strip() if main_div.find('h2') else "Titre non trouvÃ©"
         
         # Extract the lyrics
-        lyrics_content = lyrics_div.find('div', {'class': 'my-3'})
+        lyrics_content = main_div.find('div', {'class': 'my-3'})
         if lyrics_content:
+            # Remove any script tags
+            for script in lyrics_content(["script", "style"]):
+                script.decompose()
             lyrics = lyrics_content.get_text(separator='\n', strip=True)
+            # Remove any lines that are just numbers (verse numbers)
+            lyrics = '\n'.join([line for line in lyrics.split('\n') if not line.strip().isdigit()])
+            # Remove any remaining unwanted text
+            lyrics = re.sub(r'\(Nalaina.*?\)', '', lyrics).strip()
         else:
             lyrics = "Paroles non trouvÃ©es"
         
@@ -56,8 +64,7 @@ def scrape_lyrics():
         
         return jsonify(result)
     else:
-        return jsonify({'error': 'Lyrics not found'}), 404
-
+        return jsonify({'error': 'Content not found'}), 404
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)
-
+                              
