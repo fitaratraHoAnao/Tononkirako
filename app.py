@@ -7,41 +7,40 @@ app = Flask(__name__)
 
 @app.route('/scrape_lyrics', methods=['GET'])
 def scrape_lyrics():
-    # Get the artist and song title from the request parameters
+    # Obtenir les paramètres artist et song_title à partir de la requête
     artist = request.args.get('artist', '')
     song_title = request.args.get('song', '')
     
-    # Construct the URL
+    # Construire l'URL
     url = f"https://tononkira.serasera.org/hira/{artist}/{song_title}"
     
-    # Send a GET request to the URL
+    # Envoyer une requête GET à l'URL
     response = requests.get(url)
     
-    # Parse the HTML content
+    # Analyser le contenu HTML
     soup = BeautifulSoup(response.content, 'html.parser')
     
-    # Find the main content div
+    # Trouver la div principale contenant les paroles
     main_div = soup.find('div', {'id': 'main'})
     
     if main_div:
-        # Extract the title
-        title = main_div.find('h2').text.strip() if main_div.find('h2') else "Titre non trouvÃ©"
+        # Extraire le titre de la chanson
+        title = main_div.find('h2').text.strip() if main_div.find('h2') else "Titre non trouvé"
         
-        # Extract the lyrics
+        # Extraire les paroles de la chanson dans la div 'my-3'
         lyrics_content = main_div.find('div', {'class': 'my-3'})
-        if lyrics_content:
-            # Remove any script tags
-            for script in lyrics_content(["script", "style"]):
-                script.decompose()
-            lyrics = lyrics_content.get_text(separator='\n', strip=True)
-            # Remove any lines that are just numbers (verse numbers)
-            lyrics = '\n'.join([line for line in lyrics.split('\n') if not line.strip().isdigit()])
-            # Remove any remaining unwanted text
-            lyrics = re.sub(r'\(Nalaina.*?\)', '', lyrics).strip()
-        else:
-            lyrics = "Paroles non trouvÃ©es"
         
-        # Extract additional information
+        if lyrics_content:
+            # Nettoyer les paroles en retirant les balises non désirées
+            lyrics = lyrics_content.get_text(separator='\n', strip=True)
+            
+            # Nettoyer les paroles en retirant les lignes avec des chiffres ou texte indésiré
+            lyrics = re.sub(r'\(Nalaina.*?\)', '', lyrics).strip()
+            lyrics = '\n'.join([line for line in lyrics.split('\n') if not line.strip().isdigit()])
+        else:
+            lyrics = "Paroles non trouvées"
+        
+        # Extraire les informations supplémentaires si disponibles
         info_div = soup.find('div', {'class': 'col-md-4'})
         info = {}
         if info_div:
@@ -55,7 +54,7 @@ def scrape_lyrics():
                             key, value = line.split(':', 1)
                             info[key.strip()] = value.strip()
         
-        # Create a dictionary with the extracted information
+        # Retourner la réponse JSON avec le titre, les paroles, et les informations supplémentaires
         result = {
             'title': title,
             'lyrics': lyrics,
@@ -63,7 +62,10 @@ def scrape_lyrics():
         }
         
         return jsonify(result)
-    else:
-        return jsonify({'error': 'Content not found'}), 404
+    
+    # Si le contenu principal n'est pas trouvé, retourner une erreur 404
+    return jsonify({'error': 'Content not found'}), 404
+
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)
