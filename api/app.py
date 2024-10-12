@@ -27,7 +27,11 @@ def scrape_lyrics():
         title = lyrics_div.find('h2').text.strip()
         
         # Extract the lyrics
-        lyrics = lyrics_div.find('div', {'class': 'my-3'}).text.strip()
+        lyrics_content = lyrics_div.find('div', {'class': 'my-3'})
+        if lyrics_content:
+            lyrics = lyrics_content.get_text(separator='\n', strip=True)
+        else:
+            lyrics = "Paroles non trouvÃ©es"
         
         # Extract additional information
         info_div = soup.find('div', {'class': 'col-md-4'})
