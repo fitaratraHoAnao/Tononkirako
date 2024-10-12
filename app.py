@@ -1,40 +1,39 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
 import requests
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
-# Fonction pour extraire les conjugaisons depuis le site
-def get_conjugation(verbe):
+@app.route('/conjugate/<verbe>', methods=['GET'])
+def conjugate(verbe):
     url = f"https://www.conjugaison.com/verbe/{verbe}.html"
     response = requests.get(url)
     
     if response.status_code != 200:
-        return {"error": "Verbe non trouvé ou problème de connexion"}
+        return jsonify({"error": "Verbe non trouvé ou problème de connexion"}), 404
     
     soup = BeautifulSoup(response.content, 'html.parser')
-    
     conjugations = {}
+
+    # Trouver tous les modes (Indicatif, Subjonctif, etc.)
+    mode_sections = soup.find_all("div", class_="col-xs-12 col-sm-12 col-md-12 col-lg-12 verbetitle")
     
-    # Trouver la section du présent
-    present_section = soup.find_all("div", class_="col-xs-6 col-sm-6 col-md-3 col-lg-3 verbebox")
+    for mode_section in mode_sections:
+        mode = mode_section.find('h3').text.strip()  # Récupérer le nom du mode (ex: "Indicatif")
+        conjugations[mode] = {}  # Créer une entrée pour ce mode dans le dictionnaire
+        
+        # Trouver la section suivante contenant les temps de ce mode
+        verb_boxes = mode_section.find_next_sibling().find_all("div", class_="col-xs-6 col-sm-6 col-md-3 col-lg-3 verbebox")
+        
+        for box in verb_boxes:
+            tense = box.find('a').text.strip()  # Récupérer le nom du temps (ex: "Présent")
+            # Récupérer toutes les conjugaisons pour ce temps
+            conjugation_list = box.find_all("span", class_="conjugaison")
+            
+            # Stocker les conjugaisons sous le temps approprié pour ce mode
+            conjugations[mode][tense] = [conj.text.strip() for conj in conjugation_list]
     
-    if present_section:
-        # Parcourir les éléments <span class="conjugaison"> dans le présent
-        present_conjugation = present_section[0].find_all("span", class_="conjugaison")
-        if present_conjugation:
-            # Capturer chaque personne (je, tu, il/elle, nous, vous, ils/elles)
-            conjugations["present"] = {
-                "je": present_conjugation[0].text.strip(),
-                "tu": present_conjugation[1].text.strip(),
-                "il/elle": present_conjugation[2].text.strip(),
-                "nous": present_conjugation[3].text.strip(),
-                "vous": present_conjugation[4].text.strip(),
-                "ils/elles": present_conjugation[5].text.strip()
-            }
-        else:
-            conjugations["present"] = "Pas de conjugaison trouvée pour ce verbe"
-    else:
-        conjugations["present"] = "Pas de conjugaison trouvée pour ce verbe"
-    
-    return conjugations
+    return jsonify(conjugations)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
